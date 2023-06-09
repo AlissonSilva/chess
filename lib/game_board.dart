@@ -1,3 +1,4 @@
+import 'package:chess/components/dead_piece.dart';
 import 'package:chess/components/piece.dart';
 import 'package:chess/components/square.dart';
 import 'package:chess/helper/helper_methods.dart';
@@ -31,6 +32,15 @@ class _GameBoardState extends State<GameBoard> {
   // A list of valid moves for the currently selected piece
   // each move is represented as a list with 2 elements: row and col
   List<List<int>> validMoveis = [];
+
+  // A list of white pieces that have been taken by the black player
+  List<ChessPiece> whitePiecesTaken = [];
+
+  // A list of black pieces that have been taken by the white player
+  List<ChessPiece> blackPiecesTaken = [];
+
+  // A boolean to indicate whose turn it is
+  bool isWhiteTurn = true;
 
   @override
   void initState() {
@@ -165,9 +175,11 @@ class _GameBoardState extends State<GameBoard> {
       // }
       // No piece has been selected yet, this is the first selection
       if (selectedPiece == null && board[row][col] != null) {
-        selectedPiece = board[row][col];
-        selectedRow = row;
-        selectedCol = col;
+        if (board[row][col]!.isWhite == isWhiteTurn) {
+          selectedPiece = board[row][col];
+          selectedRow = row;
+          selectedCol = col;
+        }
       }
       // There is a piece already selected, but user can select another one of their pieces
       else if (board[row][col] != null &&
@@ -219,7 +231,7 @@ class _GameBoardState extends State<GameBoard> {
 
         if (isInBoard(row + direction, col - 1) &&
             board[row + direction][col] != null &&
-            board[row + direction][col - 1]!.isWhite) {
+            board[row + direction][col]!.isWhite) {
           candidateMoves.add([row + direction, col - 1]);
         }
 
@@ -379,6 +391,17 @@ class _GameBoardState extends State<GameBoard> {
 
   // MOVE PIECE
   void movePiece(int newRow, int newCol) {
+    // if the new spot has an enemy pieces
+    if (board[newRow][newCol] != null) {
+      // add the captured piece to the appropriate list
+      var capturedPiece = board[newRow][newCol];
+      if (capturedPiece!.isWhite) {
+        whitePiecesTaken.add(capturedPiece);
+      } else {
+        blackPiecesTaken.add(capturedPiece);
+      }
+    }
+
     // move the piece and clear the old spot
     board[newRow][newCol] = selectedPiece;
     board[selectedRow][selectedCol] = null;
@@ -390,42 +413,81 @@ class _GameBoardState extends State<GameBoard> {
       selectedCol = -1;
       validMoveis = [];
     });
+
+    // change turns
+
+    isWhiteTurn = !isWhiteTurn;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
-      body: GridView.builder(
-        itemCount: 8 * 8,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate:
-            const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 8),
-        itemBuilder: (context, index) {
-          // get the row and col position of this square
-          int row = index ~/ 8;
-          int col = index % 8;
+      body: Column(
+        children: [
+          // WHITE PIECES TAKEN
+          Expanded(
+            child: GridView.builder(
+              itemCount: whitePiecesTaken.length,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 8),
+              itemBuilder: (context, index) => DeadPiece(
+                imagePath: whitePiecesTaken[index].imagePath,
+                isWhite: true,
+              ),
+            ),
+          ),
+          // CHESS BOARD
+          Expanded(
+            flex: 3,
+            child: GridView.builder(
+              itemCount: 8 * 8,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 8),
+              itemBuilder: (context, index) {
+                // get the row and col position of this square
+                int row = index ~/ 8;
+                int col = index % 8;
 
-          //  check if this square is selected
-          bool isSelected = selectedRow == row && selectedCol == col;
+                //  check if this square is selected
+                bool isSelected = selectedRow == row && selectedCol == col;
 
-          // check if this square is a valid move
-          bool isValidMove = false;
-          for (var position in validMoveis) {
-            // compare row and col
-            if (position[0] == row && position[1] == col) {
-              isValidMove = true;
-            }
-          }
+                // check if this square is a valid move
+                bool isValidMove = false;
+                for (var position in validMoveis) {
+                  // compare row and col
+                  if (position[0] == row && position[1] == col) {
+                    isValidMove = true;
+                  }
+                }
 
-          return Square(
-            isWhite: isWhite(index),
-            piece: board[row][col],
-            isSelected: isSelected,
-            onTap: () => pieceSelected(row, col),
-            isValidMove: isValidMove,
-          );
-        },
+                return Square(
+                  isWhite: isWhite(index),
+                  piece: board[row][col],
+                  isSelected: isSelected,
+                  onTap: () => pieceSelected(row, col),
+                  isValidMove: isValidMove,
+                );
+              },
+            ),
+          ),
+
+          // BLACK PIECES TAKEN
+          Expanded(
+            child: GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: blackPiecesTaken.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 8),
+              itemBuilder: (context, index) => DeadPiece(
+                imagePath: blackPiecesTaken[index].imagePath,
+                isWhite: false,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
