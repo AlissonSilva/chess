@@ -6,6 +6,7 @@ class Square extends StatelessWidget {
   final bool isWhite;
   final ChessPiece? piece;
   final bool isSelected;
+  final bool isValidMove;
   final void Function()? onTap;
 
   const Square(
@@ -13,7 +14,8 @@ class Square extends StatelessWidget {
       required this.isWhite,
       required this.piece,
       required this.isSelected,
-      required this.onTap});
+      required this.onTap,
+      required this.isValidMove});
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +24,8 @@ class Square extends StatelessWidget {
     // if selected, squere is green
     if (isSelected) {
       squareColor = Colors.green;
+    } else if (isValidMove) {
+      squareColor = Colors.green[300];
     }
     // otherwise, it's white or black
     else {
@@ -32,6 +36,7 @@ class Square extends StatelessWidget {
       onTap: onTap,
       child: Container(
         color: squareColor,
+        margin: EdgeInsets.all(isValidMove ? 8 : 0),
         child: piece != null
             ? Image.asset(
                 piece!.imagePath,
