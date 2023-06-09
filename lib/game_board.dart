@@ -16,6 +16,18 @@ class _GameBoardState extends State<GameBoard> {
   // with each position possibly containing a chess piece
   late List<List<ChessPiece?>> board;
 
+  // The currently selected piece on the chess board,
+  // if no piece is selected, this is null;
+  ChessPiece? selectedPiece;
+
+  // The row index of the selected piece
+  // Default value -1 indicated no piece is currently selected;
+  int selectedRow = -1;
+
+  // The col index of the selected piece
+  // Default value -1 indicated no piece is currently selected;
+  int selectedCol = -1;
+
   @override
   void initState() {
     // TODO: implement initState
@@ -132,6 +144,18 @@ class _GameBoardState extends State<GameBoard> {
     board = newBoard;
   }
 
+  // USER SELECTED A PIECE
+  void pieceSelected(int row, int col) {
+    setState(() {
+      // selected a piece if there is a piece in that position
+      if (board[row][col] != null) {
+        selectedPiece = board[row][col];
+        selectedRow = row;
+        selectedCol = col;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -143,13 +167,17 @@ class _GameBoardState extends State<GameBoard> {
             const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 8),
         itemBuilder: (context, index) {
           // get the row and col position of this square
-
           int row = index ~/ 8;
           int col = index % 8;
+
+          //  check if this square is selected
+          bool isSelected = selectedRow == row && selectedCol == col;
 
           return Square(
             isWhite: isWhite(index),
             piece: board[row][col],
+            isSelected: isSelected,
+            onTap: () => pieceSelected(row, col),
           );
         },
       ),
