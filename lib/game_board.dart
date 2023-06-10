@@ -42,6 +42,11 @@ class _GameBoardState extends State<GameBoard> {
   // A boolean to indicate whose turn it is
   bool isWhiteTurn = true;
 
+  // initial position of kings (keep track of this to make it easier later to see if king is in check)
+  List<int> whiteKingPosition = [7, 4];
+  List<int> blackKingPosition = [0, 4];
+  bool checkStatus = false;
+
   @override
   void initState() {
     // TODO: implement initState
@@ -230,14 +235,14 @@ class _GameBoardState extends State<GameBoard> {
         // pawns can kill diagonally
 
         if (isInBoard(row + direction, col - 1) &&
-            board[row + direction][col] != null &&
-            board[row + direction][col]!.isWhite) {
+            board[row + direction][col - 1] != null &&
+            board[row + direction][col - 1]!.isWhite != piece.isWhite) {
           candidateMoves.add([row + direction, col - 1]);
         }
 
         if (isInBoard(row + direction, col + 1) &&
-            board[row + direction][col] != null &&
-            board[row + direction][col + 1]!.isWhite) {
+            board[row + direction][col + 1] != null &&
+            board[row + direction][col + 1]!.isWhite != piece.isWhite) {
           candidateMoves.add([row + direction, col + 1]);
         }
 
@@ -402,9 +407,26 @@ class _GameBoardState extends State<GameBoard> {
       }
     }
 
+    // check if the piece being moved in a king
+    if (selectedPiece!.type == ChessPieceType.king) {
+      // update the appropriate king pos
+      if (selectedPiece!.isWhite) {
+        whiteKingPosition = [newRow, newCol];
+      } else {
+        blackKingPosition = [newRow, newCol];
+      }
+    }
+
     // move the piece and clear the old spot
     board[newRow][newCol] = selectedPiece;
     board[selectedRow][selectedCol] = null;
+
+    // see if any kings are under attack
+    if (isKingInCheck(!isWhiteTurn)) {
+      checkStatus = true;
+    } else {
+      checkStatus = false;
+    }
 
     // clear selection
     setState(() {
@@ -417,6 +439,32 @@ class _GameBoardState extends State<GameBoard> {
     // change turns
 
     isWhiteTurn = !isWhiteTurn;
+  }
+
+  // IS KING IN CHECK?
+  bool isKingInCheck(bool isWhiteKing) {
+    // get the position of the king
+    List<int> kingPosition =
+        isWhiteKing ? whiteKingPosition : blackKingPosition;
+
+    // check if any enemoy piece can attack the king
+    for (int i = 0; i < 8; i++) {
+      for (var j = 0; j < 8; j++) {
+        // skip empty squares and pieces of the same color as the king
+        if (board[i][j] == null || board[i][j]!.isWhite == isWhiteKing) {
+          continue;
+        }
+        List<List<int>> pieceValidMoves =
+            calculateRawValidMoves(i, j, board[i][j]);
+
+        // check if the king's position is in this piece's valid moves
+        if (pieceValidMoves.any((move) =>
+            move[0] == kingPosition[0] && move[1] == kingPosition[1])) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   @override
@@ -438,6 +486,8 @@ class _GameBoardState extends State<GameBoard> {
               ),
             ),
           ),
+          // GAME STATUS
+          Text(checkStatus ? "CHECK!" : ""),
           // CHESS BOARD
           Expanded(
             flex: 3,
